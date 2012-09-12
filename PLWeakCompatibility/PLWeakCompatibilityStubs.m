@@ -22,6 +22,7 @@
 #undef objc_loadWeak
 #undef objc_storeWeak
 
+#ifndef NO_MAZWR
 // MAZeroingWeakRef Support
 static Class MAZWR = Nil;
 static bool mazwrEnabled = true;
@@ -52,6 +53,7 @@ void PLWeakCompatibilitySetMAZWREnabled(BOOL enabled) {
 BOOL PLWeakCompatibilityHasMAZWR(void) {
     return has_mazwr();
 }
+#endif
 
 // Runtime (or ARC compatibility) prototypes we use here.
 PLObjectPtr objc_release(PLObjectPtr obj);
@@ -189,11 +191,13 @@ static SEL deallocSELSwizzled;
  * @return the object stored at the weak reference, retained, or nil if none
  */
 static PLObjectPtr PLLoadWeakRetained(PLObjectPtr *location) {
+#ifndef NO_MAZWR
     /* Hand off to MAZWR */
     if (has_mazwr()) {
         MAZeroingWeakRef *mazrw = (__bridge MAZeroingWeakRef *) *location;
         return objc_retain([mazrw target]);
     }
+#endif
 
     WeakInit();
 
@@ -218,12 +222,14 @@ static PLObjectPtr PLLoadWeakRetained(PLObjectPtr *location) {
  * @param the object being weakly referenced at this location
  */
 static void PLRegisterWeak(PLObjectPtr *location, PLObjectPtr obj) {
+#ifndef NO_MAZWR
     /* Hand off to MAZWR */
-    if (has_mazwr()) {        
+    if (has_mazwr()) {
         MAZeroingWeakRef *ref = [[MAZWR alloc] initWithTarget: obj];
         *location = (__bridge_retained PLObjectPtr) ref;
         return;
     }
+#endif
 
     WeakInit();
 
@@ -252,12 +258,14 @@ static void PLRegisterWeak(PLObjectPtr *location, PLObjectPtr obj) {
  * @param obj the object to unregister
  */
 static void PLUnregisterWeak(PLObjectPtr *location) {
+#ifndef NO_MAZWR
     /* Hand off to MAZWR */
     if (has_mazwr()) {
         if (*location != nil)
             objc_release(*location);
         return;
     }
+#endif
 
     WeakInit();
 
